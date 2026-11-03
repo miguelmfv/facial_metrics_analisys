@@ -1,8 +1,16 @@
 import numpy as np, pandas as pd
 
 def load(path):
-    df = pd.read_csv(path, sep=',', index_col=False)
+    df = pd.read_csv(path, sep=';', index_col=False)
+    if df.shape[1] == 1:                       # provavelmente separado por vírgula
+        df = pd.read_csv(path, sep=',', index_col=False)
     df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
+    if 'ct_face_x0' not in df.columns:
+        ct = sum(c.startswith('ct_') for c in df.columns)
+        raise SystemExit(
+            f"O CSV '{path}' nao tem as colunas de contorno (ct_face_x0...). "
+            f"{df.shape[1]} colunas, {ct} comecam com 'ct_'. Primeiras: {list(df.columns[:8])}"
+        )
     return df
 
 def pts(row, prefix, n):
