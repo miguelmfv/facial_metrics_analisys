@@ -1,0 +1,90 @@
+python .\pipeline_rosto_armacao.py --csv .\arquivos_csv\faces-frame-type-frame-id.csv --modelo-rosto .\modelo_formato_rosto_sem_linhas_branco.joblib --drop file_name --excluir coracao    
+Classes excluidas ['coracao']: 48 linhas removidas.
+Linhas: 2784 | Features: 29 (modo: derivadas)
+
+Linhas por classe e modelos (grupos) distintos por classe:
+            linhas  modelos
+classe                     
+aviador        147       11
+gatinho        234       16
+ovalado        472       32
+quadrado       686       54
+redondo        607       47
+retangular     638       57
+
+Features usadas (29): ['h_w', 'pos_sobrancelha', 'pos_olho', 'pos_nariz', 'pos_boca', 'terco_testa', 'terco_meio', 'terco_baixo', 'boca_queixo', 'larg_testa_sobr', 'larg_sobrancelha', 'larg_olho', 'larg_nariz', 'larg_boca', 'larg_mandibula', 'larg_queixo', 'testa_maca', 'mandib_maca', 'mandib_testa', 'queixo_mandib', 'maca_vs_max', 'ang_queixo', 'ang_queixo_largo', 'ang_mand_dir', 'ang_mand_esq', 'ang_mand', 'area_ret', 'circularidade', 'olhos_larg']
+
+O joblib e um dict com as chaves: ['modelo', 'features', 'alvo']
+Modelo de rosto: classes = ['diamante', 'oval', 'quadrado', 'redondo']
+Distribuicao do rosto previsto (top1) nas imagens de review:
+rosto_top1
+diamante    32.8
+redondo     26.9
+oval        26.1
+quadrado    14.3
+(se quase tudo cair em uma classe, o modelo de rosto esta perdido nessas fotos)
+
+CSV com probabilidades salvo em: review_com_prob_rosto.csv
+AVISO: 12 modelos aparecem em mais de uma classe de armacao.
+
+==============================================================================
+RELACAO ARMACAO x ROSTO
+==============================================================================
+
+Probabilidade media de cada formato de rosto, por formato de armacao
+(uma media por modelo de armacao, depois media entre os modelos da classe):
+            n_modelos  p_rosto_diamante  p_rosto_oval  p_rosto_quadrado  p_rosto_redondo
+classe                                                                                  
+aviador            11             0.303         0.273             0.207            0.217
+gatinho            16             0.306         0.282             0.194            0.218
+ovalado            31             0.299         0.265             0.210            0.226
+quadrado           46             0.285         0.265             0.220            0.229
+redondo            46             0.286         0.270             0.218            0.226
+retangular         55             0.277         0.255             0.230            0.238
+
+Se todas as linhas forem parecidas, nao ha relacao.
+Amplitude (max - min entre classes) por formato de rosto:
+p_rosto_diamante    0.029
+p_rosto_oval        0.027
+p_rosto_quadrado    0.036
+p_rosto_redondo     0.022
+
+% das imagens por formato de rosto previsto (top1), por formato de armacao:
+col_0       diamante  oval  quadrado  redondo
+row_0                                        
+aviador         36.1  25.9      10.9     27.2
+gatinho         35.9  29.5       6.8     27.8
+ovalado         36.9  25.2      13.6     24.4
+quadrado        31.8  27.3      13.7     27.3
+redondo         31.1  26.7      15.2     27.0
+retangular      30.4  23.7      18.0     27.9
+
+Teste de permutacao (2000 embaralhamentos do rotulo entre 205 modelos de armacao):
+  p global (algum formato de rosto difere entre armacoes): 0.1764
+  p p_rosto_diamante: 0.1794
+  p p_rosto_oval: 0.2264
+  p p_rosto_quadrado: 0.0175
+  p p_rosto_redondo: 0.6257
+  (com 4 testes por coluna, use p < 0.0125 como corte aproximado)
+
+==============================================================================
+COMPARACAO (media de 4 folds agrupados por modelo de armacao)
+==============================================================================
+                                                          acc_teste  acc_balanc.   bal±  f1_macro   top3
+conjunto               modelo                                                                           
+-                      Baseline: classe majoritaria           0.246        0.167  0.000     0.066    NaN
+                       Baseline: sorteio por proporcao        0.204        0.165  0.004     0.165    NaN
+so features            Regressao logistica                    0.213        0.221  0.011     0.191  0.587
+                       Random Forest (mais regularizada)      0.210        0.207  0.027     0.180  0.608
+                       HistGradientBoosting                   0.236        0.208  0.022     0.205  0.624
+features + prob. rosto Regressao logistica                    0.210        0.217  0.006     0.191  0.589
+                       Random Forest (mais regularizada)      0.209        0.207  0.025     0.179  0.598
+                       HistGradientBoosting                   0.242        0.216  0.023     0.212  0.625
+so prob. rosto         Regressao logistica                    0.153        0.174  0.015     0.125  0.500
+                       Random Forest (mais regularizada)      0.172        0.186  0.013     0.157  0.555
+                       HistGradientBoosting                   0.177        0.173  0.008     0.163  0.552
+
+Referencias do acaso:
+  acuracia: uniforme = 0.167 | por proporcao = 0.199 | majoritaria = 0.246
+  acuracia balanceada do acaso = 0.167
+  top3: uniforme = 0.500 | ranking fixo das 3 classes mais frequentes = 0.694

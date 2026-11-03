@@ -1,0 +1,43 @@
+==============================================================================
+RESULTADOS (media de 5 folds agrupados por 'frame_id')
+==============================================================================
+                                   acc_treino  acc_teste      ±  acc_balanceada  f1_macro   top3
+modelo                                                                                          
+Baseline: classe majoritaria            0.242      0.242  0.004           0.152     0.059    NaN
+Baseline: sorteio por proporcao         0.196      0.225  0.004           0.176     0.165    NaN
+Regressao logistica                     0.226      0.186  0.011           0.195     0.158  0.523
+Random Forest (sua config)              0.766      0.202  0.014           0.186     0.169  0.570
+Random Forest (mais regularizada)       0.349      0.162  0.027           0.182     0.145  0.574
+HistGradientBoosting                    0.824      0.224  0.011           0.193     0.184  0.591
+
+Referencias do acaso:
+  sorteio uniforme (7 classes): acc = 0.143 | top3 = 0.429
+  sorteio pela proporcao das classes:    acc = 0.193
+  sempre a classe majoritaria:           acc = 0.242
+
+Melhor por F1 macro: HistGradientBoosting
+
+Matriz de confusao (linhas = real, colunas = previsto):
+['aviador', 'coracao', 'gatinho', 'ovalado', 'quadrado', 'redondo', 'retangular']
+[[  7   1  17  29  34  29  30]
+ [  5   6   8   7   4  11   7]
+ [ 15   7  48  31  38  52  43]
+ [ 26   5  44  86  83 102 126]
+ [ 41   7  63 111 143 155 166]
+ [ 34  10  51 111 127 156 118]
+ [ 25   5  62 122 117 118 189]]
+
+Relatorio por classe (predicoes fora-da-amostra):
+              precision    recall  f1-score   support
+
+     aviador      0.046     0.048     0.047       147
+     coracao      0.146     0.125     0.135        48
+     gatinho      0.164     0.205     0.182       234
+     ovalado      0.173     0.182     0.178       472
+    quadrado      0.262     0.208     0.232       686
+     redondo      0.250     0.257     0.254       607
+  retangular      0.278     0.296     0.287       638
+
+    accuracy                          0.224      2832
+   macro avg      0.189     0.189     0.188      2832
+weighted avg      0.227     0.224     0.225      2832

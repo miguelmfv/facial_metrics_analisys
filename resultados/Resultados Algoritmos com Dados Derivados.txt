@@ -1,0 +1,58 @@
+Linhas: 2832 | Features: 29 (modo: derivadas)
+
+Linhas por classe e modelos (grupos) distintos por classe:
+            linhas  modelos
+classe                     
+aviador        147       11
+coracao         48        3
+gatinho        234       16
+ovalado        472       32
+quadrado       686       54
+redondo        607       47
+retangular     638       57
+
+Features usadas (29): ['h_w', 'pos_sobrancelha', 'pos_olho', 'pos_nariz', 'pos_boca', 'terco_testa', 'terco_meio', 'terco_baixo', 'boca_queixo', 'larg_testa_sobr', 'larg_sobrancelha', 'larg_olho', 'larg_nariz', 'larg_boca', 'larg_mandibula', 'larg_queixo', 'testa_maca', 'mandib_maca', 'mandib_testa', 'queixo_mandib', 'maca_vs_max', 'ang_queixo', 'ang_queixo_largo', 'ang_mand_dir', 'ang_mand_esq', 'ang_mand', 'area_ret', 'circularidade', 'olhos_larg']
+
+==============================================================================
+RESULTADOS (media de 5 folds agrupados por 'frame_id')
+==============================================================================
+                                   acc_treino  acc_teste      ±  acc_balanceada  f1_macro   top3
+modelo                                                                                          
+Baseline: classe majoritaria            0.242      0.242  0.004           0.152     0.059    NaN
+Baseline: sorteio por proporcao         0.196      0.225  0.004           0.176     0.165    NaN
+Regressao logistica                     0.214      0.194  0.019           0.209     0.163  0.546
+Random Forest (sua config)              0.762      0.230  0.010           0.207     0.184  0.583
+Random Forest (mais regularizada)       0.348      0.205  0.021           0.209     0.165  0.568
+HistGradientBoosting                    0.775      0.225  0.003           0.190     0.177  0.600
+
+Referencias do acaso:
+  sorteio uniforme (7 classes): acc = 0.143 | top3 = 0.429
+  sorteio pela proporcao das classes:    acc = 0.193
+  sempre a classe majoritaria:           acc = 0.242
+
+Melhor por F1 macro: Random Forest (sua config)
+
+Matriz de confusao (linhas = real, colunas = previsto):
+['aviador', 'coracao', 'gatinho', 'ovalado', 'quadrado', 'redondo', 'retangular']
+[[ 22   7  21  13  28  23  33]
+ [  5   4   7  11   5   9   7]
+ [ 23  12  50  38  33  36  42]
+ [ 43  28  77  92  50  73 109]
+ [ 89  31 109  92 113 106 146]
+ [ 68  39  95  84  86  91 144]
+ [ 35  31  70  89  60  74 279]]
+
+Relatorio por classe (predicoes fora-da-amostra):
+              precision    recall  f1-score   support
+
+     aviador      0.077     0.150     0.102       147
+     coracao      0.026     0.083     0.040        48
+     gatinho      0.117     0.214     0.151       234
+     ovalado      0.220     0.195     0.207       472
+    quadrado      0.301     0.165     0.213       686
+     redondo      0.221     0.150     0.179       607
+  retangular      0.367     0.437     0.399       638
+
+    accuracy                          0.230      2832
+   macro avg      0.190     0.199     0.184      2832
+weighted avg      0.254     0.230     0.233      2832
