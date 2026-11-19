@@ -130,6 +130,7 @@ Era um script exploratório abandonado. Está preservado como registro.
 - Não edite nenhum arquivo deste diretório, nem para corrigir o que está errado.
   Se precisar de uma versão corrigida, escreva um módulo novo no pacote.
 - Não apague nada daqui.
-- `resultados/review_com_prob_rosto.csv` é saída de execução **comprovadamente
-  errada** (modelo de armação no lugar do de rosto). Não cite aquele arquivo como
-  resultado: leia a seção "Reprodutibilidade" do README da raiz.
+- `execucoes-invalidas/review_com_prob_rosto.csv` é saída de execução
+  **comprovadamente errada** (modelo de armação no lugar do de rosto). Não cite
+  aquele arquivo como resultado: leia o `README.md` daquela pasta, que traz o
+  diagnóstico, e a seção "Reprodutibilidade" do README da raiz.

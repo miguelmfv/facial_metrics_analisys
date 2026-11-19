@@ -243,20 +243,25 @@ Os scripts originais, que geraram os números citados na monografia, estão em
 `legado/`, inalterados. **Leia `legado/README.md`** para o procedimento de
 execução depois da mudança de estrutura.
 
-Duas ressalvas sobre arquivos de `resultados/`, documentadas porque afetam o que
-pode ser citado. **Os dois arquivos continuam onde sempre estiveram**: a
-renomeação decidida em D-53, D-54 e D-55 ainda não foi aplicada (ver o relatório
-em `contexto/desenvolvimento/14-analise-rodada-3-tarefa-1.md`). Nenhum dos dois
-foi apagado nem alterado.
+Três ressalvas sobre arquivos de resultado, documentadas porque afetam o que pode
+ser citado. As movimentações decididas em **D-53, D-54 e D-55 foram aplicadas** no
+commit `af614d6`: cada um dos três arquivos mudou de lugar ou de nome para que o
+nome diga a procedência. **Nenhum foi apagado nem alterado** — os três renomeios
+saíram a 100% de similaridade. Ver
+`contexto/desenvolvimento/15-fechamento-analise-rodada-3-tarefa-1.md`.
 
-- `resultados/resultados_previsao.csv` **não se reproduz** com o modelo que está
+- `resultados/resultados_previsao--nao-reproduzivel-com-artefato-atual.csv`
+  **não se reproduz** com o modelo que está
   hoje no repositório: 21 das 78 classes previstas divergem da linha-base atual,
   com diferença máxima de probabilidade de 0,197. A causa é um `.joblib` que não
   existe mais **ou** uma fórmula antiga de feature, e as duas hipóteses **não
   são separáveis** com o que está versionado, porque a checagem de
   compatibilidade do `avaliar_modelo.py` compara **nomes** de feature, não
-  valores. Acurácia daquele arquivo: 0,500. Da linha-base de hoje: 0,513.
-- `resultados/review_com_prob_rosto.csv` é a saída de uma execução em que o
+  valores. Acurácia daquele arquivo: 0,500. Da linha-base de hoje: 0,513. A
+  versão **reproduzível** está ao lado, em
+  `resultados/resultados_previsao--linha-base-2026-11-18.csv` (sha256
+  `005f100f5cdef39e…`), gerada pelo artefato e pelo código deste repositório.
+- `legado/execucoes-invalidas/review_com_prob_rosto.csv` é a saída de uma execução em que o
   modelo de **armação** foi usado no lugar do de **rosto**, rodada sobre o pool
   não rotulado. A prova: as colunas de probabilidade são `p_rosto_aviador`,
   `p_rosto_gatinho`, `p_rosto_retangular` e companhia — sete **formatos de
@@ -265,8 +270,10 @@ foi apagado nem alterado.
   `arquivos_csv/faces-nao-classificado.csv`. É o erro que as duas travas
   `checar_modelo_rosto` do `pipeline_rosto_armacao.py` existem para impedir.
   **Não cite este arquivo como resultado.** `modelo.py` passou a recusar esse
-  engano na carga, e há teste para isso.
-- `review_com_prob_rosto.csv` na raiz é legítimo (tem as 4 classes de rosto),
+  engano na carga, e há teste para isso. A pasta tem um `README.md` próprio com o
+  diagnóstico completo e a procedência.
+- `resultados/review_com_prob_rosto--excluindo-coracao-gatinho.csv` (antes na
+  raiz) é legítimo (tem as 4 classes de rosto),
   mas são 2.550 linhas, de uma execução com `--excluir coracao gatinho`
   (2.832 − 48 − 234 = 2.550). **Não é** a execução de 2.784 linhas que sustenta
   o p global = 0,176, registrada em
