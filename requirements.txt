@@ -1,0 +1,22 @@
+# Dependencias de producao, com versao fixa.
+#
+# Estas sao EXATAMENTE as versoes em que o modelo versionado foi verificado
+# carregando e prevendo neste repositorio (ver README.md, secao "Verificacao do
+# artefato"). Nao sao "as versoes mais recentes que devem funcionar".
+#
+# scikit-learn esta fixado em 1.9.1 por um motivo especifico e nao negociavel:
+# e a versao gravada dentro do proprio
+# modelos/modelo_formato_rosto_sem_linhas_branco.joblib, legivel nos bytes do
+# pickle no campo _sklearn_version. Desserializar um estimador em outra versao
+# produz, na melhor das hipoteses, um InconsistentVersionWarning e, na pior,
+# um modelo silenciosamente diferente. Como o modelo NAO e retreinado neste
+# projeto (D-48), a versao do leitor tem de acompanhar a do escritor.
+#
+# Para subir qualquer uma destas versoes: refaca a verificacao do artefato e a
+# prova de regressao antes de commitar a mudanca.
+
+scikit-learn==1.9.1
+numpy==2.5.5
+pandas==3.1.1
+joblib==1.6.0
+matplotlib==3.11.2

@@ -1,0 +1,23 @@
+# Ambiente virtual (D-47). O modulo venv do Python >= 3.11 ja escreve um
+# .venv/.gitignore com "*", mas depender de arquivo gerado seria fragil.
+.venv/
+
+# Bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Cache de ferramentas
+.pytest_cache/
+
+# Saidas geradas por execucao, ancoradas na raiz de proposito.
+# O avaliar_modelo.py escreve este arquivo no diretorio de trabalho atual.
+/resultados_previsao.csv
+/legado/resultados_previsao.csv
+
+# ATENCAO, de proposito NAO estao aqui:
+#   - resultados/            -> conteudo versionado, intocado por decisao (D-45)
+#   - arquivos_csv/          -> conteudo versionado, intocado por decisao
+#   - review_com_prob_rosto.csv (raiz) -> ja esta RASTREADO pelo git.
+#     Ignorar um caminho ja rastreado nao tem efeito nenhum e so engana quem le
+#     o arquivo, entao nao foi incluido.

@@ -1,0 +1,19 @@
+# Configuracao de ferramentas deste repositorio.
+#
+# NAO existe tabela [project] nem [build-system] aqui, e isso e deliberado:
+# este repositorio nao e instalado como pacote (nenhum "pip install .") porque
+# nenhuma dependencia de build foi autorizada (D-51). Consequencia pratica: um
+# "pip install ." neste diretorio vai falhar, e deve falhar.
+#
+# O pacote fica em src/vizo_rosto/. Para que ele seja importavel sem passo de
+# instalacao e sem manipular sys.path dentro do codigo, existem dois caminhos,
+# e so dois:
+#
+#   1) nos testes: a opcao "pythonpath" abaixo, que e nativa do pytest e
+#      acrescenta src/ ao sys.path na coleta;
+#   2) fora dos testes: a variavel de ambiente PYTHONPATH apontando para src/,
+#      conforme documentado no README.md e em legado/README.md.
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,9 @@
+# Dependencias de DESENVOLVIMENTO, separadas das de producao de proposito
+# (D-51): nada aqui e necessario para carregar o modelo ou gerar uma
+# recomendacao. Instale junto com as de producao:
+#
+#   .venv/Scripts/python -m pip install -r requirements.txt -r requirements-dev.txt
+
+-r requirements.txt
+
+pytest==9.2.0
