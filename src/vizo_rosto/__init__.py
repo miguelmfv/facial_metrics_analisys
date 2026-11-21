@@ -28,7 +28,8 @@ Exemplo de uso::
     rec.formato_rosto                 # 'oval'
     rec.previsao.probabilidades       # as 4 classes, da maior para a menor
     [a.formato for a in rec.armacoes] # formatos de armacao ranqueados
-    rec.para_dicionario()             # tudo em tipos nativos, para JSON
+    rec.para_dicionario()             # saida completa, de auditoria
+    rec.para_contrato_backend()       # saida para o backend, sem porcentagem
 """
 
 from __future__ import annotations
@@ -44,7 +45,16 @@ from .modelo import (
     PrevisaoRosto,
     carregar,
 )
-from .recomendacao import ArmacaoRecomendada, Recomendacao, calcular_features, recomendar
+from .recomendacao import (
+    CHAVES_CONTRATO,
+    CHAVES_PROIBIDAS_NO_CONTRATO,
+    VERSAO_CONTRATO,
+    ArmacaoRecomendada,
+    ContratoVioladoError,
+    Recomendacao,
+    calcular_features,
+    recomendar,
+)
 from .visagismo import (
     AVISO_RASCUNHO,
     FORMATOS_ARMACAO,
@@ -74,7 +84,11 @@ __all__ = [
     "PrevisaoRosto",
     "carregar",
     # recomendacao
+    "CHAVES_CONTRATO",
+    "CHAVES_PROIBIDAS_NO_CONTRATO",
+    "VERSAO_CONTRATO",
     "ArmacaoRecomendada",
+    "ContratoVioladoError",
     "Recomendacao",
     "calcular_features",
     "recomendar",

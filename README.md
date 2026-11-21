@@ -115,6 +115,24 @@ que fazer com ela, em vez de receber uma única classe com falsa firmeza.
 vive no banco do backend, que este repositório não acessa. Casar formato com
 produto é trabalho do backend, com esta saída na mão.
 
+### A saída para o backend é outra, e mais pobre
+
+`para_dicionario()`, acima, é a saída **de auditoria**: leva as probabilidades,
+a confiança e as fontes. O backend consome `para_contrato_backend()`, que não
+leva número de incerteza nenhum, por decisão do autor (D-66): formato de rosto
+como valor único e armações como ranking, sem porcentagem.
+
+```python
+recomendar(medicao, modelo).para_contrato_backend()
+# {'formato_rosto': 'oval',
+#  'ranking_armacoes': [{'posicao': 1, 'formato': 'quadrado'}, ...],
+#  'principio': ..., 'aviso': ..., 'versao_contrato': 1}
+```
+
+O contrato, as quatro barreiras que impedem uma porcentagem de voltar a ele, o
+custo medido de instalar o pacote no backend (+318,55 MiB de imagem) e de onde
+o `.joblib` é carregado estão em **[docs/contrato-backend.md](docs/contrato-backend.md)**.
+
 ---
 
 ## Estrutura
