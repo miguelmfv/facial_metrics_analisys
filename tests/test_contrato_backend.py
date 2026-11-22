@@ -21,9 +21,15 @@ um jeito diferente de a porcentagem voltar:
    e um numero fracionario e o contrato legitimo nao tem nenhum.
 3. **Nenhum numero dentro de texto.** Pega quem transforma a confianca em
    string para escapar da barreira 2 (``"formato_rosto": "oval (51%)"``). Os
-   dois campos de texto livre sao comparados **por igualdade** com as
-   constantes de ``visagismo``, e todo outro texto tem de ser um identificador
-   minusculo sem digito.
+   dois campos de texto livre sao comparados **por igualdade** com o que o
+   pacote declara (``PRINCIPIO`` e ``montar_aviso``), e todo outro texto tem de
+   ser um identificador minusculo sem digito.
+
+   Desde D-79 o ``aviso`` e **montado** a partir das metricas do artefato em
+   uso, em vez de ser constante. Por isso a comparacao e com
+   ``montar_aviso(modelo_armacao)`` e nao com um literal: um literal aqui
+   congelaria numeros que o proximo retreino muda, e o teste passaria a
+   reprovar o artefato certo.
 4. **O guarda de tempo de execucao.** Confere que
    ``recomendacao._conferir_contrato`` realmente recusa, em vez de so existir.
 
@@ -43,10 +49,18 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from vizo_rosto import recomendar, visagismo
+from vizo_rosto import recomendar
+from vizo_rosto.modelo import CLASSES_ESPERADAS as FORMATOS_ROSTO
 from vizo_rosto.modelo import ModeloFormatoRosto
-from vizo_rosto.recomendacao import ContratoVioladoError, _conferir_contrato
-from vizo_rosto.visagismo import FORMATOS_ARMACAO, FORMATOS_ROSTO
+from vizo_rosto.modelo_armacao import CLASSES_ESPERADAS_ARMACAO as FORMATOS_ARMACAO
+from vizo_rosto.modelo_armacao import ModeloFormatoArmacao
+from vizo_rosto.recomendacao import (
+    N_RECOMENDADOS_PADRAO,
+    PRINCIPIO,
+    ContratoVioladoError,
+    _conferir_contrato,
+    montar_aviso,
+)
 
 # ---------------------------------------------------------------------------
 # O contrato, transcrito A MAO do §4 do briefing da rodada 3, tarefa 2.
@@ -61,6 +75,13 @@ CHAVES_ESPERADAS = {
 }
 
 CHAVES_ESPERADAS_NO_ITEM_DO_RANKING = {"posicao", "formato"}
+
+#: A versao do contrato, escrita a mao aqui pelo mesmo motivo das chaves. Subiu
+#: para 2 em D-82, quando a segunda etapa deixou de ser a tabela de visagismo e
+#: passou a ser um classificador. O backend tem a contrapartida disto em
+#: `vizo_app/recommendationEngine.py` (`VERSAO_CONTRATO_ACEITA`) e **recusa** o
+#: que nao conhece: enquanto la estiver 1, nenhuma recomendacao v2 e gravada.
+VERSAO_ESPERADA = 2
 
 #: Nomes que D-66 proibe nominalmente. Lista propria, independente da que o
 #: modulo mantem, pelo motivo explicado no cabecalho.
@@ -108,9 +129,13 @@ def _percorrer(no: Any, caminho: str = "") -> list[tuple[str, Any, Any]]:
 
 
 @pytest.fixture
-def contrato(modelo: ModeloFormatoRosto, linha_csv: pd.Series) -> dict[str, Any]:
+def contrato(
+    modelo: ModeloFormatoRosto,
+    modelo_armacao: ModeloFormatoArmacao,
+    linha_csv: pd.Series,
+) -> dict[str, Any]:
     """O contrato gerado a partir de uma linha real do CSV de teste."""
-    return recomendar(linha_csv, modelo).para_contrato_backend()
+    return recomendar(linha_csv, modelo, modelo_armacao).para_contrato_backend()
 
 
 # ===========================================================================
@@ -218,19 +243,24 @@ def test_todo_numero_do_contrato_e_int_do_python_e_nao_do_numpy(
 # ===========================================================================
 
 
-def test_os_campos_de_texto_livre_sao_as_constantes_de_visagismo_sem_alteracao(
-    contrato: dict[str, Any]
+def test_os_campos_de_texto_livre_sao_os_declarados_pelo_pacote_sem_alteracao(
+    contrato: dict[str, Any], modelo_armacao: ModeloFormatoArmacao
 ) -> None:
     """Comparacao por igualdade, para que nada possa ser anexado ao texto.
 
     ``aviso`` e ``principio`` sao os dois campos de texto longo do contrato, e
     seriam o esconderijo obvio para uma confianca interpolada
-    (``aviso + f" (confianca {c:.0%})"``). Exigir igualdade exata com a
-    constante fecha esse caminho, e de passagem prova D-63: o AVISO_RASCUNHO
-    chega ao backend integro, nao resumido nem reescrito.
+    (``aviso + f" (confianca {c:.0%})"``). Exigir igualdade exata fecha esse
+    caminho, e de passagem prova D-63: o aviso chega ao backend integro, nao
+    resumido nem reescrito.
+
+    O aviso **legitimamente** cita numeros -- as metricas medidas do artefato e
+    o p = 0,176 do resultado negativo. E por isso que ele e comparado com o que
+    `montar_aviso` produz para este mesmo artefato: o que nao pode e um numero
+    que nao venha de la.
     """
-    assert contrato["aviso"] == visagismo.AVISO_RASCUNHO
-    assert contrato["principio"] == visagismo.principio_geral()
+    assert contrato["aviso"] == montar_aviso(modelo_armacao)
+    assert contrato["principio"] == PRINCIPIO
 
 
 def test_os_valores_de_identificador_nao_tem_digito_nem_sinal_de_porcentagem(
@@ -247,14 +277,14 @@ def test_os_valores_de_identificador_nao_tem_digito_nem_sinal_de_porcentagem(
             )
 
 
-def test_o_json_serializado_nao_contem_decimal_fora_dos_textos_de_visagismo(
+def test_o_json_serializado_nao_contem_decimal_fora_dos_textos_livres(
     contrato: dict[str, Any]
 ) -> None:
     """Varredura final sobre o payload inteiro, do jeito que ele viaja.
 
-    Os dois textos de ``visagismo`` contem numeros legitimos (o p = 0,176 do
-    resultado negativo do TCC, que D-63 manda viajar), entao sao removidos
-    antes da varredura em vez de a varredura ser enfraquecida.
+    Os dois textos livres contem numeros legitimos (as metricas medidas e o
+    p = 0,176 do resultado negativo, que D-63 manda viajar), entao sao
+    removidos antes da varredura em vez de a varredura ser enfraquecida.
     """
     sem_texto_livre = {
         chave: valor
@@ -358,22 +388,27 @@ def test_o_ranking_de_armacoes_e_ordenado_sem_buraco_e_sem_repeticao(
     contrato: dict[str, Any]
 ) -> None:
     ranking = contrato["ranking_armacoes"]
-    assert 3 <= len(ranking) <= 6, (
-        f"o ranking tem {len(ranking)} itens; as tabelas de visagismo deste "
-        "projeto vao de 3 (diamante) a 6 (oval)"
+    assert len(ranking) == N_RECOMENDADOS_PADRAO, (
+        f"o ranking tem {len(ranking)} itens; D-84 manda levar "
+        f"{N_RECOMENDADOS_PADRAO} ao contrato. O ranking completo das 7 classes "
+        "continua disponivel em previsao_armacao, fora do contrato."
     )
     assert [item["posicao"] for item in ranking] == list(range(1, len(ranking) + 1))
     formatos = [item["formato"] for item in ranking]
     assert len(set(formatos)) == len(formatos), f"formato repetido no ranking: {formatos}"
     assert all(f in FORMATOS_ARMACAO for f in formatos)
-    assert "coracao" not in formatos, (
-        "'coracao' nao tem regra de visagismo neste projeto (FORMATOS_ARMACAO_SEM_REGRA)"
-    )
 
 
-def test_a_versao_do_contrato_e_um_inteiro(contrato: dict[str, Any]) -> None:
+def test_a_versao_do_contrato_e_a_acordada(contrato: dict[str, Any]) -> None:
+    """D-82: a versao subiu, e o backend precisa saber disso.
+
+    O numero esta escrito a mao neste teste de proposito. Subir
+    `VERSAO_CONTRATO` no pacote sem subir `VERSAO_CONTRATO_ACEITA` no backend
+    faz toda recomendacao ser recusada na gravacao; o teste quebrando aqui e o
+    lembrete de que as duas pontas mudam juntas.
+    """
     assert type(contrato["versao_contrato"]) is int
-    assert contrato["versao_contrato"] >= 1
+    assert contrato["versao_contrato"] == VERSAO_ESPERADA
 
 
 def test_o_contrato_sobrevive_a_ida_e_volta_por_json(contrato: dict[str, Any]) -> None:
@@ -382,20 +417,25 @@ def test_o_contrato_sobrevive_a_ida_e_volta_por_json(contrato: dict[str, Any]) -
 
 
 def test_o_contrato_e_deterministico_para_a_mesma_medicao(
-    modelo: ModeloFormatoRosto, linha_csv: pd.Series
+    modelo: ModeloFormatoRosto,
+    modelo_armacao: ModeloFormatoArmacao,
+    linha_csv: pd.Series,
 ) -> None:
-    """Seed fixa, modelo congelado: duas chamadas dao o mesmo dicionario."""
-    primeiro = recomendar(linha_csv, modelo).para_contrato_backend()
-    segundo = recomendar(linha_csv, modelo).para_contrato_backend()
+    """Seed fixa, modelos congelados: duas chamadas dao o mesmo dicionario."""
+    primeiro = recomendar(linha_csv, modelo, modelo_armacao).para_contrato_backend()
+    segundo = recomendar(linha_csv, modelo, modelo_armacao).para_contrato_backend()
     assert primeiro == segundo
 
 
 def test_as_duas_formas_de_entrada_dao_o_mesmo_contrato(
-    modelo: ModeloFormatoRosto, linha_csv: pd.Series, medicao_json: dict[str, Any]
+    modelo: ModeloFormatoRosto,
+    modelo_armacao: ModeloFormatoArmacao,
+    linha_csv: pd.Series,
+    medicao_json: dict[str, Any],
 ) -> None:
     """JSON do backend e linha de CSV, mesmo rosto real, mesmo contrato."""
-    do_csv = recomendar(linha_csv, modelo).para_contrato_backend()
-    do_json = recomendar(medicao_json, modelo).para_contrato_backend()
+    do_csv = recomendar(linha_csv, modelo, modelo_armacao).para_contrato_backend()
+    do_json = recomendar(medicao_json, modelo, modelo_armacao).para_contrato_backend()
     assert do_json == do_csv
 
 
@@ -405,18 +445,19 @@ def test_as_duas_formas_de_entrada_dao_o_mesmo_contrato(
 
 
 def test_as_78_linhas_reais_respeitam_o_contrato_inteiro(
-    modelo: ModeloFormatoRosto, df_teste: pd.DataFrame
+    modelo: ModeloFormatoRosto,
+    modelo_armacao: ModeloFormatoArmacao,
+    df_teste: pd.DataFrame,
 ) -> None:
     """Um caso que passa pode ser sorte; 78 nao sao.
 
-    Repete as quatro barreiras sobre cada rosto real do CSV de teste, porque o
-    tamanho do ranking muda com o formato de rosto previsto (3 para diamante, 6
-    para oval) e um contrato que so foi conferido em um formato nao foi
-    conferido.
+    Repete as quatro barreiras sobre cada rosto real do CSV de teste. O tamanho
+    do ranking agora e constante (D-84), mas o conteudo muda a cada rosto, e um
+    contrato conferido em um rosto so nao foi conferido.
     """
     formatos_vistos: set[str] = set()
     for i in range(len(df_teste)):
-        c = recomendar(df_teste.iloc[i], modelo).para_contrato_backend()
+        c = recomendar(df_teste.iloc[i], modelo, modelo_armacao).para_contrato_backend()
         formatos_vistos.add(c["formato_rosto"])
 
         assert set(c) == CHAVES_ESPERADAS, f"linha {i}: chaves {sorted(c)}"
@@ -424,7 +465,7 @@ def test_as_78_linhas_reais_respeitam_o_contrato_inteiro(
             assert str(chave).lower() not in CHAVES_PROIBIDAS, f"linha {i}: {onde}"
             assert not PADRAO_DE_CHAVE_SUSPEITA.search(str(chave)), f"linha {i}: {onde}"
             assert not isinstance(valor, float), f"linha {i}: {onde} = {valor!r}"
-        assert c["aviso"] == visagismo.AVISO_RASCUNHO, f"linha {i}"
+        assert c["aviso"] == montar_aviso(modelo_armacao), f"linha {i}"
         assert [it["posicao"] for it in c["ranking_armacoes"]] == list(
             range(1, len(c["ranking_armacoes"]) + 1)
         ), f"linha {i}"
@@ -435,19 +476,25 @@ def test_as_78_linhas_reais_respeitam_o_contrato_inteiro(
     )
 
 
-def test_para_dicionario_continua_levando_tudo_o_que_levava(
-    modelo: ModeloFormatoRosto, linha_csv: pd.Series
+def test_para_dicionario_continua_levando_a_incerteza_que_o_contrato_nao_leva(
+    modelo: ModeloFormatoRosto,
+    modelo_armacao: ModeloFormatoArmacao,
+    linha_csv: pd.Series,
 ) -> None:
-    """A saida de auditoria NAO foi tocada por esta tarefa.
+    """As duas saidas tem publicos diferentes, e isso nao mudou com D-79.
 
-    As duas saidas tem publicos diferentes: a monografia precisa das
-    probabilidades e das fontes, e o backend nao pode receber as
-    probabilidades. Se alguem "arrumar" ``para_dicionario`` para obedecer a
+    A monografia precisa das probabilidades das duas etapas; o backend nao pode
+    receber nenhuma. Se alguem "arrumar" ``para_dicionario`` para obedecer a
     D-66, a auditoria do TCC fica sem os numeros e este teste quebra.
     """
-    d = recomendar(linha_csv, modelo).para_dicionario()
+    d = recomendar(linha_csv, modelo, modelo_armacao).para_dicionario()
     assert len(d["formato_rosto"]["probabilidades"]) == 4
     assert isinstance(d["formato_rosto"]["confianca"], float)
     assert isinstance(d["formato_rosto"]["margem_1o_2o"], float)
-    assert d["formatos_armacao"]["ranking"][0]["fontes"]
-    assert d["formatos_armacao"]["ranking"][0]["justificativa"]
+    assert isinstance(d["formatos_armacao"]["confianca"], float)
+    assert isinstance(d["formatos_armacao"]["margem_1o_2o"], float)
+    assert len(d["formatos_armacao"]["ranking"]) == len(modelo_armacao.classes)
+    assert all(
+        isinstance(item["probabilidade"], float)
+        for item in d["formatos_armacao"]["ranking"]
+    )

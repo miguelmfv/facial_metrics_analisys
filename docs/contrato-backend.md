@@ -7,6 +7,28 @@ Este documento descreve o que o pacote `vizo_rosto` entrega ao backend Django,
 como o backend passa a importá-lo, e o custo medido disso. Todo número aqui foi
 obtido por execução, e o comando que o produziu está citado ao lado.
 
+> ## Atualização de 22/11/2026 — contrato **versão 2** (D-79 a D-84)
+>
+> A segunda etapa da recomendação deixou de ser a tabela de visagismo e passou
+> a ser um **classificador treinado** (D-79). O que isso muda aqui:
+>
+> - **as cinco chaves e os tipos são os mesmos.** O backend não precisa de
+>   migração, campo novo nem serializer novo;
+> - `versao_contrato` passou a **2**, e o backend **recusa** o que não conhece:
+>   enquanto `VERSAO_CONTRATO_ACEITA` continuar `1` em
+>   `vizo_app/recommendationEngine.py`, toda recomendação nova é rejeitada na
+>   gravação. É falha alta, não silenciosa;
+> - `recomendar()` agora precisa de **dois** artefatos, e o backend carrega só
+>   um. Falta uma setting com o caminho de `modelo_formato_armacao.joblib`, ao
+>   lado de `VIZO_ROSTO_MODELO_PATH`, e passar o modelo na chamada;
+> - `ranking_armacoes` tem **exatamente 3 itens** (D-84), e `coracao` pode
+>   aparecer — ele é uma das 7 classes do classificador;
+> - `principio` e `aviso` mudaram de conteúdo e passaram a ser **acentuados**.
+>   O `aviso` é montado a partir das métricas do artefato em uso.
+>
+> O restante deste documento é da rodada 3 e descreve o contrato versão 1.
+> Onde ele fala em regra de visagismo, leia "classificador de armação".
+
 ---
 
 ## 1. A saída: `Recomendacao.para_contrato_backend()`
@@ -16,10 +38,11 @@ Método novo em `src/vizo_rosto/recomendacao.py`. O
 públicos diferentes e coexistem de propósito (§3).
 
 ```python
-from vizo_rosto import carregar, recomendar
+from vizo_rosto import carregar, carregar_armacao, recomendar
 
-modelo = carregar(caminho_do_joblib)          # uma vez, no startup (§5)
-contrato = recomendar(medicao, modelo).para_contrato_backend()
+rosto = carregar(caminho_do_joblib)                    # uma vez, no startup (§5)
+armacao = carregar_armacao(caminho_do_joblib_armacao)  # idem, desde D-79
+contrato = recomendar(medicao, rosto, armacao).para_contrato_backend()
 ```
 
 Retorno, com exatamente estas cinco chaves e nenhuma outra:
@@ -30,21 +53,21 @@ Retorno, com exatamente estas cinco chaves e nenhuma outra:
     "ranking_armacoes": [
         {"posicao": 1, "formato": "quadrado"},
         {"posicao": 2, "formato": "retangular"},
-        # ... de 3 a 6 itens, conforme o formato de rosto
+        {"posicao": 3, "formato": "redondo"},
     ],
-    "principio": "Contraste geometrico: recomenda-se a armacao cuja forma ...",
-    "aviso": "Recomendacao baseada em regras de visagismo declaradas, ...",
-    "versao_contrato": 1,
+    "principio": "Os formatos de armação são ordenados por um classificador ...",
+    "aviso": "Recomendação gerada por dois classificadores em sequência ...",
+    "versao_contrato": 2,
 }
 ```
 
 | chave | tipo | garantias |
 |---|---|---|
 | `formato_rosto` | `str` | um de `diamante`, `oval`, `quadrado`, `redondo`. Valor único, não ranking (D-61) |
-| `ranking_armacoes` | `list[dict]` | 3 a 6 itens; `posicao` começa em 1, sem buraco e sem repetição; `formato` é um dos 7 do dataset, nunca `coracao` |
-| `principio` | `str` | idêntico a `visagismo.principio_geral()` |
-| `aviso` | `str` | idêntico a `visagismo.AVISO_RASCUNHO`, 460 caracteres, íntegro (D-63) |
-| `versao_contrato` | `int` | `recomendacao.VERSAO_CONTRATO` |
+| `ranking_armacoes` | `list[dict]` | exatamente 3 itens (D-84); `posicao` começa em 1, sem buraco e sem repetição; `formato` é um dos 7 do dataset, `coracao` incluído |
+| `principio` | `str` | idêntico a `recomendacao.PRINCIPIO` |
+| `aviso` | `str` | idêntico a `recomendacao.montar_aviso(modelo_armacao)`, íntegro (D-63), acentuado |
+| `versao_contrato` | `int` | `recomendacao.VERSAO_CONTRATO`, hoje `2` |
 
 Tudo em tipos nativos (`str`, `int`, `list`, `dict`). Grava em `JSONField` sem
 conversão e sobrevive a `json.dumps` → `json.loads` idêntico.
@@ -314,12 +337,14 @@ round-trip por JSON foi idêntico.
 - **Não prova que o modelo acerta.** A acurácia continua 0,47 ± 0,08 em CV
   10-fold. O contrato transporta uma previsão que erra mais da metade das vezes,
   e isso não mudou nesta tarefa.
-- **Não prova que a recomendação é correta no mérito.** As regras de visagismo
-  são um rascunho não revisado pelo autor (D-44), e o resultado central do TCC é
-  que **não existe** relação estatisticamente detectável entre formato de rosto e
-  a armação que as pessoas usam (teste de permutação, p global = 0,176). A
-  recomendação é prescritiva e declarada; o `aviso` que viaja no contrato existe
-  justamente para que isso não se perca no caminho até o usuário.
+- **Não prova que a recomendação é correta no mérito.** Desde D-79 o ranking vem
+  de um classificador cujas métricas medidas são de nível de acaso (0,23 de
+  acurácia contra 0,24 da classe majoritária; 0,60 de top-3 contra 0,68 de uma
+  lista fixa por frequência), e o resultado central do TCC é que **não existe**
+  relação estatisticamente detectável entre formato de rosto e a armação que as
+  pessoas usam (teste de permutação, p global = 0,176). O `aviso` que viaja no
+  contrato carrega esses números justamente para que isso não se perca no
+  caminho até o usuário.
 - **Não prova o número de tamanho de imagem por `docker build`.** Os 318,55 MiB
   vêm da medição direta dos wheels manylinux `cp313` descompactados e
   bytecompilados, não de uma imagem construída — o Docker está desligado e
@@ -332,15 +357,15 @@ round-trip por JSON foi idêntico.
 
 Nenhum destes foi implementado. Estão aqui porque são achados, não tarefas.
 
-1. **`versao_contrato` versiona a forma, e o que vai mudar é o conteúdo.** Ele
-   distingue formatos de dicionário. Mas a mudança que o projeto **planeja** é
-   outra: o autor vai revisar a tabela de visagismo (D-44). Quando isso
-   acontecer, o ranking gravado no banco muda e `versao_contrato` continua `1`,
-   porque a forma não mudou. Resultado: recomendações geradas antes e depois da
-   revisão ficam indistinguíveis no banco. O que resolveria é um segundo campo,
-   versionando a **tabela de regras** — e isso mexe no contrato do §4, que foi
-   fixado para permitir trabalho em paralelo, então é decisão do Maestro e do
-   autor, não minha.
+1. **`versao_contrato` versiona a forma, e o que muda é o conteúdo.** ~~O autor
+   vai revisar a tabela de visagismo (D-44)~~ — em 22/11/2026 a tabela saiu do
+   caminho (D-79) e a versão subiu para 2 justamente para marcar essa troca de
+   procedência. O ponto em aberto **permanece** na forma seguinte: retreinar o
+   classificador de armação muda o ranking gravado no banco e `versao_contrato`
+   continua `2`, porque a forma não mudou. Recomendações geradas por artefatos
+   diferentes ficam indistinguíveis. O que resolveria é um campo com a
+   procedência do artefato (o `.joblib` já carrega data, seed e CSV dentro de
+   si) — é decisão do autor, e mexe no contrato.
 2. **O contrato não leva a justificativa nem a fonte.** O §4 traz só `posicao` e
    `formato`. A `justificativa` (o critério visagista daquela posição) e as
    `fontes` ficam de fora, então o app pode exibir "armação redonda" sem dizer

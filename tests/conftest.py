@@ -18,13 +18,15 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from vizo_rosto import carregar
+from vizo_rosto import carregar, carregar_armacao
 from vizo_rosto.entrada import CONTORNOS_EXIGIDOS
 from vizo_rosto.modelo import ModeloFormatoRosto
+from vizo_rosto.modelo_armacao import ModeloFormatoArmacao
 
 RAIZ = Path(__file__).resolve().parent.parent
 CSV_TESTE = RAIZ / "arquivos_csv" / "faces-teste-supervisionado-formato-rosto.csv"
 JOBLIB = RAIZ / "modelos" / "modelo_formato_rosto_sem_linhas_branco.joblib"
+JOBLIB_ARMACAO = RAIZ / "modelos" / "modelo_formato_armacao.joblib"
 
 
 @pytest.fixture(scope="session")
@@ -51,6 +53,21 @@ def modelo() -> ModeloFormatoRosto:
     if not JOBLIB.is_file():
         pytest.skip(f"Modelo nao encontrado em {JOBLIB}")
     return carregar(JOBLIB)
+
+
+@pytest.fixture(scope="session")
+def modelo_armacao() -> ModeloFormatoArmacao:
+    """O classificador de formato de armacao, carregado uma vez por sessao.
+
+    Desde D-79 ele e a segunda etapa obrigatoria da cadeia: sem ele nao existe
+    ranking nenhum. Escopo de sessao pelo mesmo motivo do modelo de rosto.
+    """
+    if not JOBLIB_ARMACAO.is_file():
+        pytest.skip(
+            f"Classificador de armacao nao encontrado em {JOBLIB_ARMACAO}. "
+            "Gere-o com 'python treinar_modelo_armacao.py'."
+        )
+    return carregar_armacao(JOBLIB_ARMACAO)
 
 
 @pytest.fixture

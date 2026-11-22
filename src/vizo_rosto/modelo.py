@@ -1,11 +1,15 @@
 """Carga e uso do modelo de formato de rosto.
 
-Este modulo e **descritivo**: ele usa um RandomForest treinado em 313 rostos
-rotulados a mao para estimar o formato de rosto. Ele nao sabe nada sobre
-armacao, e nao deve passar a saber: nenhum modelo neste projeto preve armacao a
-partir do rosto, porque o experimento central do TCC mostrou que essa relacao
-nao e estatisticamente detectavel (teste de permutacao, p global = 0,176). A
-parte prescritiva vive em :mod:`vizo_rosto.visagismo`.
+Este modulo e a **primeira** etapa da cadeia: ele usa um RandomForest treinado
+em 313 rostos rotulados a mao para estimar o formato de rosto. Ele nao sabe nada
+sobre armacao, e nao deve passar a saber -- a segunda etapa vive em
+:mod:`vizo_rosto.modelo_armacao`, e a separacao e o que permite dizer, de cada
+numero, de qual modelo ele veio.
+
+Este e o modelo que tem sinal: 0,47 contra 0,25 do acaso em 4 classes. O da
+segunda etapa nao tem, e o experimento central do TCC explica por que (teste de
+permutacao sobre a relacao rosto-armacao, p global = 0,176). Usa-lo assim mesmo
+e decisao registrada do autor (D-79).
 
 O modelo e **reusado congelado** (D-48): nada aqui treina, retreina ou ajusta
 hiperparametro. A versao de ``scikit-learn`` tem de ser a mesma gravada no

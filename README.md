@@ -19,23 +19,29 @@ nenhuma relação estatisticamente detectável** (teste de permutação, p globa
 **0,176**). Acrescentar as probabilidades de formato de rosto ao modelo de
 armação dá **ganho nulo**, dentro do desvio-padrão dos folds.
 
-Isso tem uma consequência direta sobre o que este código faz e não faz:
+### O que o código faz com esse resultado (D-79, 22/11/2026)
 
-| | Natureza | Como se obtém |
-|---|---|---|
-| Formato de **rosto** | **descritivo** | RandomForest treinado em 313 rostos rotulados à mão |
-| Formatos de **armação** | **prescritivo** | regra de visagismo declarada, com fonte citada |
+Por decisão do autor, a recomendação é produzida pelo **pipeline original**:
+dois classificadores em sequência, os dois aprendidos dos dados.
 
-**Nenhum modelo neste repositório prevê armação a partir do rosto, e nenhum
-deve passar a prever** — é exatamente a hipótese que o experimento refutou. O
-que os dados refutam é que as pessoas **já usem** a armação que o visagismo
-recomenda; a regra prescritiva continua sendo uma regra prescritiva, e por isso
-ela é escrita à mão, com fonte, em `src/vizo_rosto/visagismo.py`.
+| | Natureza | Como se obtém | Desempenho medido |
+|---|---|---|---|
+| Formato de **rosto** | descritivo | RandomForest treinado em 313 rostos rotulados à mão | 0,47 contra 0,25 do acaso (4 classes) |
+| Formatos de **armação** | descritivo | classificador treinado em 2.832 fotos de catálogo, que recebe as 29 features **mais** as probabilidades de rosto | 0,23 contra 0,24 da classe majoritária |
 
-> ⚠️ A tabela de visagismo é um **rascunho ainda não revisado pelo autor**.
-> Leia o cabeçalho de `visagismo.py` antes de usar qualquer regra dela: a fonte
-> mais credível que consegui ler **não cobre o rosto diamante**, e a fonte
-> comercial se contradiz três vezes dentro da própria página.
+> ⚠️ **O segundo modelo prevê no nível do acaso, e isso é o resultado do
+> trabalho, não um defeito a corrigir.** O acerto dentro de uma lista de três
+> formatos é **0,60**, abaixo dos **0,68** de uma lista fixa das três armações
+> mais frequentes, igual para todo rosto. O ranking responde à entrada, mas o
+> acerto dele não supera o de uma lista chumbada por frequência. Usá-lo assim
+> mesmo é decisão registrada do autor (D-79); o `aviso` que viaja com cada
+> recomendação declara esses números, lidos do próprio artefato.
+
+Até 21/11/2026 a segunda etapa era **prescritiva**: uma tabela de visagismo
+declarada, com fonte citada. D-79 a tirou do caminho de execução.
+`src/vizo_rosto/visagismo.py` continua no repositório como **registro
+histórico** — é o que a monografia cita —, mas nenhum caminho de execução o
+importa, e há teste garantindo isso.
 
 ---
 
@@ -76,22 +82,29 @@ Nos testes isso é automático: `pyproject.toml` declara `pythonpath = ["src"]`.
 ## Como usar
 
 ```python
-from vizo_rosto import carregar, recomendar
+from vizo_rosto import carregar, carregar_armacao, recomendar
 
-modelo = carregar("modelos/modelo_formato_rosto_sem_linhas_branco.joblib")
+rosto = carregar("modelos/modelo_formato_rosto_sem_linhas_branco.joblib")
+armacao = carregar_armacao("modelos/modelo_formato_armacao.joblib")
 
 # A entrada aceita as duas formas, e elas dão o MESMO resultado:
 #   1) o JSON de uma medição, como o backend o guarda
 #   2) uma linha achatada de CSV (dict ou pandas.Series com colunas ct_*)
-rec = recomendar(medicao, modelo)
+rec = recomendar(medicao, rosto, armacao)
 
-rec.formato_rosto                   # 'oval'
-rec.previsao.probabilidades         # as 4 classes, da maior para a menor
-rec.previsao.margem                 # distância entre a 1ª e a 2ª classe
-[a.formato for a in rec.armacoes]   # formatos de armação ranqueados
-rec.armacoes[0].fontes              # a fonte da regra aplicada
-rec.para_dicionario()               # tudo em tipos nativos, para JSON
+rec.formato_rosto                       # 'oval'
+rec.previsao.probabilidades             # as 4 classes de rosto, da maior para a menor
+rec.previsao.margem                     # distância entre a 1ª e a 2ª classe
+rec.formato_armacao                     # 'retangular' — o 1º do ranking
+[a.formato for a in rec.armacoes]       # os 3 que vão para o backend (D-84)
+rec.previsao_armacao.probabilidades     # as 7 classes de armação, ordenadas
+rec.para_dicionario()                   # tudo em tipos nativos, para JSON
 ```
+
+Os **dois** artefatos são obrigatórios: sem o segundo, `recomendar()` levanta
+`ModeloDeArmacaoAusenteError` dizendo o que carregar. O classificador de
+armação é gerado por `python treinar_modelo_armacao.py`, que mede antes de
+salvar e grava as métricas dentro do próprio `.joblib`.
 
 A entrada **não tem rótulo** e nenhum caminho do código exige um: o dado vem de
 um usuário real e não existe classe verdadeira para ele. Se a medição trouxer um
@@ -100,10 +113,11 @@ campo de rótulo por acaso, ele é ignorado — há teste garantindo isso.
 ### O que a saída significa
 
 ```
-formato_rosto.previsto        descritivo:  a classe mais provável
-formato_rosto.probabilidades descritivo:  as 4 classes, sempre todas
-formatos_armacao.ranking     prescritivo: regra declarada, com fonte
-aviso                        a condição de rascunho e o resultado negativo
+formato_rosto.previsto        a classe de rosto mais provável
+formato_rosto.probabilidades  as 4 classes de rosto, sempre todas
+formatos_armacao.ranking      as 7 classes de armação, ordenadas pelo classificador
+formatos_armacao.n_no_contrato quantas delas o backend recebe (D-84)
+aviso                         as métricas medidas e o resultado negativo
 ```
 
 **As 4 probabilidades são devolvidas sempre, de propósito.** A acurácia do
@@ -123,11 +137,15 @@ leva número de incerteza nenhum, por decisão do autor (D-66): formato de rosto
 como valor único e armações como ranking, sem porcentagem.
 
 ```python
-recomendar(medicao, modelo).para_contrato_backend()
+recomendar(medicao, rosto, armacao).para_contrato_backend()
 # {'formato_rosto': 'oval',
-#  'ranking_armacoes': [{'posicao': 1, 'formato': 'quadrado'}, ...],
-#  'principio': ..., 'aviso': ..., 'versao_contrato': 1}
+#  'ranking_armacoes': [{'posicao': 1, 'formato': 'quadrado'}, ... 3 itens],
+#  'principio': ..., 'aviso': ..., 'versao_contrato': 2}
 ```
+
+> A versão do contrato subiu para **2** em D-82. O backend recusa o que não
+> conhece: enquanto `VERSAO_CONTRATO_ACEITA` continuar `1` em
+> `vizo_app/recommendationEngine.py`, nenhuma recomendação nova é gravada.
 
 O contrato, as quatro barreiras que impedem uma porcentagem de voltar a ele, o
 custo medido de instalar o pacote no backend (+318,55 MiB de imagem) e de onde
@@ -142,10 +160,12 @@ src/vizo_rosto/
   features_faciais.py   as 29 features. LÓGICA CONGELADA: ver abaixo
   entrada.py            adaptador: JSON de medição | linha de CSV -> linha achatada
   modelo.py             carrega o .joblib, valida features, prevê formato de rosto
-  visagismo.py          a tabela prescritiva, com fontes  <- RASCUNHO
-  recomendacao.py       orquestra tudo e devolve a saída
+  modelo_armacao.py     idem para o classificador de armação (2ª etapa, D-79)
+  visagismo.py          a tabela prescritiva  <- REGISTRO HISTÓRICO, fora do caminho
+  recomendacao.py       orquestra as duas etapas e devolve a saída
+treinar_modelo_armacao.py  treina, mede e versiona o classificador de armação
 tests/                  pytest
-modelos/                o .joblib em uso, versionado
+modelos/                os dois .joblib em uso, versionados
 legado/                 os scripts originais, inalterados. Ver legado/README.md
 arquivos_csv/           os datasets
 resultados/             saídas salvas das execuções
