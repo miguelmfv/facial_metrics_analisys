@@ -1,0 +1,10 @@
+# Os artefatos de modelo sao binarios. Sem isto, o core.autocrlf=true do
+# ambiente Windows deste projeto pode fazer o git tratar um .joblib como texto
+# e converter sequencias de fim de linha dentro do pickle, corrompendo-o num
+# checkout futuro. O sintoma apareceria longe daqui, como modelo que nao
+# desserializa, e nao como erro de git.
+#
+# Os dois artefatos rastreados hoje estao provadamente intactos (sha256 do disco
+# igual ao do blob commitado): a heuristica de NUL byte do git acertou. Esta
+# linha troca a heuristica por garantia, para os artefatos atuais e os futuros.
+*.joblib binary
