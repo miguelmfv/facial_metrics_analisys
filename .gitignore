@@ -21,3 +21,7 @@ __pycache__/
 #   - review_com_prob_rosto.csv (raiz) -> ja esta RASTREADO pelo git.
 #     Ignorar um caminho ja rastreado nao tem efeito nenhum e so engana quem le
 #     o arquivo, entao nao foi incluido.
+
+# ---------- Editores e ferramentas ----------
+.idea/
+.maestri/
